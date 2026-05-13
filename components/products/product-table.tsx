@@ -13,6 +13,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { deleteProduct } from "@/lib/api"
 import type { ProductReadWithCategory } from "@/lib/types"
+import { useProductTableMetrics } from "@/components/products/use-product-table-metrics"
 import { ProductAvatar } from "@/components/shared/product-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -54,6 +55,7 @@ export function ProductTable({
   const router = useRouter()
   const [toDelete, setToDelete] = useState<ProductReadWithCategory | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const { data: metricsByProductId } = useProductTableMetrics(products)
 
   async function handleDelete() {
     if (!toDelete) return
@@ -82,6 +84,8 @@ export function ProductTable({
             <TableHead>Nombre</TableHead>
             <TableHead>Categoría</TableHead>
             <TableHead>Código de barras</TableHead>
+            <TableHead>Precio</TableHead>
+            <TableHead>Stock actual</TableHead>
             <TableHead>Stock mín.</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead className="w-12"></TableHead>
@@ -90,58 +94,64 @@ export function ProductTable({
         <TableBody>
           {products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+              <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
                 {emptyMessage}
               </TableCell>
             </TableRow>
           )}
-          {products.map((product) => (
-            <TableRow key={product.id}>
-              <TableCell>
-                <ProductAvatar imageUrl={product.image_url} name={product.name} />
-              </TableCell>
-              <TableCell className="font-medium">{product.name}</TableCell>
-              <TableCell>{product.category.name}</TableCell>
-              <TableCell className="font-mono text-sm">{product.barcode}</TableCell>
-              <TableCell>{product.min_stock}</TableCell>
-              <TableCell>
-                <Badge variant={product.is_active ? "default" : "secondary"}>
-                  {product.is_active ? "Activo" : "Inactivo"}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/productos/${product.id}`}>
-                        <HugeiconsIcon icon={ViewIcon} size={14} className="mr-2" />
-                        Ver detalle
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/productos/${product.id}/editar`}>
-                        <HugeiconsIcon icon={PencilEdit01Icon} size={14} className="mr-2" />
-                        Editar
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setToDelete(product)}
-                    >
-                      <HugeiconsIcon icon={Delete01Icon} size={14} className="mr-2" />
-                      Eliminar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {products.map((product) => {
+            const metrics = metricsByProductId?.get(product.id)
+
+            return (
+              <TableRow key={product.id}>
+                <TableCell>
+                  <ProductAvatar imageUrl={product.image_url} name={product.name} />
+                </TableCell>
+                <TableCell className="font-medium">{product.name}</TableCell>
+                <TableCell>{product.category.name}</TableCell>
+                <TableCell className="font-mono text-sm">{product.barcode}</TableCell>
+                <TableCell>{formatPrice(metrics?.price)}</TableCell>
+                <TableCell className="font-mono">{metrics?.stock ?? "—"}</TableCell>
+                <TableCell>{product.min_stock}</TableCell>
+                <TableCell>
+                  <Badge variant={product.is_active ? "default" : "secondary"}>
+                    {product.is_active ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/productos/${product.id}`}>
+                          <HugeiconsIcon icon={ViewIcon} size={14} className="mr-2" />
+                          Ver detalle
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/productos/${product.id}/editar`}>
+                          <HugeiconsIcon icon={PencilEdit01Icon} size={14} className="mr-2" />
+                          Editar
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setToDelete(product)}
+                      >
+                        <HugeiconsIcon icon={Delete01Icon} size={14} className="mr-2" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
 
@@ -168,4 +178,9 @@ export function ProductTable({
       </Dialog>
     </>
   )
+}
+
+function formatPrice(price: string | null | undefined) {
+  if (!price) return "—"
+  return `S/ ${parseFloat(price).toFixed(2)}`
 }
