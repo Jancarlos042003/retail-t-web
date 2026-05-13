@@ -42,9 +42,15 @@ import {
 
 interface ProductTableProps {
   products: ProductReadWithCategory[]
+  emptyMessage?: string
+  onDeleted?: (product: ProductReadWithCategory) => Promise<void> | void
 }
 
-export function ProductTable({ products }: ProductTableProps) {
+export function ProductTable({
+  products,
+  emptyMessage = "No hay productos registrados",
+  onDeleted,
+}: ProductTableProps) {
   const router = useRouter()
   const [toDelete, setToDelete] = useState<ProductReadWithCategory | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -54,8 +60,11 @@ export function ProductTable({ products }: ProductTableProps) {
     setDeleting(true)
     try {
       await deleteProduct(toDelete.id)
+      await onDeleted?.(toDelete)
       toast.success(`"${toDelete.name}" eliminado correctamente`)
-      router.refresh()
+      if (!onDeleted) {
+        router.refresh()
+      }
     } catch {
       toast.error("No se pudo eliminar el producto")
     } finally {
@@ -82,7 +91,7 @@ export function ProductTable({ products }: ProductTableProps) {
           {products.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                No hay productos registrados
+                {emptyMessage}
               </TableCell>
             </TableRow>
           )}
@@ -142,7 +151,8 @@ export function ProductTable({ products }: ProductTableProps) {
             <DialogTitle>Eliminar producto</DialogTitle>
             <DialogDescription>
               ¿Estás seguro de que deseas eliminar{" "}
-              <span className="font-medium">"{toDelete?.name}"</span>? Esta acción no se puede
+              <span className="font-medium">&quot;{toDelete?.name}&quot;</span>? Esta acción no
+              se puede
               deshacer.
             </DialogDescription>
           </DialogHeader>

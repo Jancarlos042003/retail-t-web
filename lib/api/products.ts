@@ -1,5 +1,7 @@
 import type {
   ProductFormData,
+  ProductListParams,
+  ProductListResponse,
   ProductPriceCreate,
   ProductPriceRead,
   ProductRead,
@@ -8,9 +10,26 @@ import type {
 } from "../types"
 import { apiFetch, apiFetchForm } from "./base"
 
+function buildProductsPath(params: ProductListParams = {}) {
+  const qs = new URLSearchParams()
+  const name = params.name?.trim()
+
+  if (name) qs.set("name", name)
+  if (params.category_id) qs.set("category_id", params.category_id)
+  if (params.is_active !== undefined) qs.set("is_active", String(params.is_active))
+  if (params.limit !== undefined) qs.set("limit", String(params.limit))
+  if (params.offset !== undefined) qs.set("offset", String(params.offset))
+
+  const query = qs.toString()
+  return query ? `/products/?${query}` : "/products/"
+}
+
+export function fetchProductsPage(params: ProductListParams = {}): Promise<ProductListResponse> {
+  return apiFetch(buildProductsPath(params))
+}
+
 export function fetchProducts(isActive?: boolean): Promise<ProductReadWithCategory[]> {
-  const query = isActive !== undefined ? `?is_active=${isActive}` : ""
-  return apiFetch(`/products/${query}`)
+  return fetchAllProducts({ is_active: isActive })
 }
 
 export function fetchProduct(id: string): Promise<ProductReadWithCategory> {
@@ -46,4 +65,24 @@ export function fetchCurrentPrice(productId: string): Promise<ProductPriceRead> 
 
 export function setPrice(productId: string, data: ProductPriceCreate): Promise<ProductPriceRead> {
   return apiFetch(`/products/${productId}/prices/`, { method: "POST", body: JSON.stringify(data) })
+}
+
+async function fetchAllProducts(params: Omit<ProductListParams, "limit" | "offset"> = {}) {
+  const firstPage = await fetchProductsPage({ ...params, limit: 100, offset: 0 })
+
+  if (firstPage.total_pages <= 1) {
+    return firstPage.items
+  }
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.total_pages - 1 }, (_, index) =>
+      fetchProductsPage({
+        ...params,
+        limit: firstPage.limit,
+        offset: firstPage.limit * (index + 1),
+      })
+    )
+  )
+
+  return [firstPage, ...remainingPages].flatMap((page) => page.items)
 }

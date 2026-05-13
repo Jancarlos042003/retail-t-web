@@ -141,3 +141,25 @@ export interface ProductFormData {
   is_active: boolean
   image?: File | null
 }
+
+export interface PaginationParams {
+  limit?: number
+  offset?: number
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  total_pages: number
+  current_page: number
+  limit: number
+  offset: number
+}
+
+export interface ProductListParams extends PaginationParams {
+  name?: string
+  category_id?: string
+  is_active?: boolean
+}
+
+export type ProductListResponse = PaginatedResponse<ProductReadWithCategory>

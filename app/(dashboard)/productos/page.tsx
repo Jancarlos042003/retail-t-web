@@ -1,19 +1,23 @@
 import Link from "next/link"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { fetchProducts } from "@/lib/api"
+import { fetchCategories, fetchProductsPage } from "@/lib/api"
+import { PRODUCTS_PAGE_SIZE } from "@/components/products/products-list.constants"
+import { ProductsContainer } from "@/components/products/products-container"
 import { PageHeader } from "@/components/shared/page-header"
-import { ProductTable } from "@/components/products/product-table"
 import { Button } from "@/components/ui/button"
 
 export default async function ProductosPage() {
-  const products = await fetchProducts()
+  const [productsPage, categories] = await Promise.all([
+    fetchProductsPage({ limit: PRODUCTS_PAGE_SIZE, offset: 0 }),
+    fetchCategories().catch(() => []),
+  ])
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Productos"
-        description={`${products.length} productos registrados`}
+        description={`${productsPage.total} productos registrados`}
         action={
           <Button asChild>
             <Link href="/productos/nuevo">
@@ -24,7 +28,7 @@ export default async function ProductosPage() {
         }
       />
 
-      <ProductTable products={products} />
+      <ProductsContainer categories={categories} initialPage={productsPage} />
     </div>
   )
 }
