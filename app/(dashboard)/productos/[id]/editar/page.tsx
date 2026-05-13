@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { fetchProduct, fetchCategories } from "@/lib/api"
+import { PageHeader } from "@/components/shared/page-header"
 import { ProductForm } from "@/components/products/product-form"
 
 interface Props {
@@ -18,10 +19,7 @@ export default async function EditarProductoPage({ params }: Props) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">Editar producto</h1>
-        <p className="text-sm text-muted-foreground">{product.name}</p>
-      </div>
+      <PageHeader title="Editar producto" description={product.name} />
       <ProductForm categories={categories} product={product} />
     </div>
   )

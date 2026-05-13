@@ -13,7 +13,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { deleteProduct } from "@/lib/api"
 import type { ProductReadWithCategory } from "@/lib/types"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ProductAvatar } from "@/components/shared/product-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,12 +89,7 @@ export function ProductTable({ products }: ProductTableProps) {
           {products.map((product) => (
             <TableRow key={product.id}>
               <TableCell>
-                <Avatar className="h-9 w-9 rounded-md">
-                  <AvatarImage src={product.image_url ?? undefined} alt={product.name} />
-                  <AvatarFallback className="rounded-md text-xs">
-                    {product.name.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <ProductAvatar imageUrl={product.image_url} name={product.name} />
               </TableCell>
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell>{product.category.name}</TableCell>

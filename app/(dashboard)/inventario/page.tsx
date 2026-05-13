@@ -1,6 +1,9 @@
 import { fetchProducts, fetchStockLevel } from "@/lib/api"
 import type { ProductReadWithCategory, StockLevelRead } from "@/lib/types"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getStockStatus } from "@/lib/stock-utils"
+import { formatDate } from "@/lib/utils"
+import { ProductAvatar } from "@/components/shared/product-avatar"
+import { PageHeader } from "@/components/shared/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -14,15 +17,8 @@ import {
 
 type ProductWithStock = ProductReadWithCategory & { stock: StockLevelRead | null }
 
-function getStockStatus(product: ProductWithStock) {
-  if (!product.stock) return { label: "Sin datos", variant: "outline" as const }
-  if (product.stock.quantity === 0) return { label: "Agotado", variant: "destructive" as const }
-  if (product.stock.quantity <= product.min_stock) return { label: "Stock bajo", variant: "secondary" as const }
-  return { label: "OK", variant: "default" as const }
-}
-
 export default async function InventarioPage() {
-  const products = await fetchProducts(true).catch(() => [] as ProductReadWithCategory[])
+  const products = await fetchProducts(true)
 
   const stockResults = await Promise.allSettled(
     products.map((p) => fetchStockLevel(p.id))
@@ -40,10 +36,7 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Inventario</h1>
-        <p className="text-sm text-muted-foreground">Estado actual del stock de productos</p>
-      </div>
+      <PageHeader title="Inventario" description="Estado actual del stock de productos" />
 
       {(outOfStock.length > 0 || lowStock.length > 0) && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -109,16 +102,11 @@ export default async function InventarioPage() {
             </TableRow>
           )}
           {productsWithStock.map((product) => {
-            const status = getStockStatus(product)
+            const status = getStockStatus(product.stock?.quantity ?? null, product.min_stock)
             return (
               <TableRow key={product.id}>
                 <TableCell>
-                  <Avatar className="h-9 w-9 rounded-md">
-                    <AvatarImage src={product.image_url ?? undefined} alt={product.name} />
-                    <AvatarFallback className="rounded-md text-xs">
-                      {product.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ProductAvatar imageUrl={product.image_url} name={product.name} />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>{product.category.name}</TableCell>
@@ -128,9 +116,7 @@ export default async function InventarioPage() {
                   <Badge variant={status.variant}>{status.label}</Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {product.stock
-                    ? new Date(product.stock.updated_at).toLocaleDateString("es-PE")
-                    : "—"}
+                  {product.stock ? formatDate(product.stock.updated_at) : "—"}
                 </TableCell>
               </TableRow>
             )

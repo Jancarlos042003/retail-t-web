@@ -3,7 +3,10 @@ import { notFound } from "next/navigation"
 import { PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { fetchProduct, fetchCurrentPrice, fetchStockLevel } from "@/lib/api"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getStockStatus } from "@/lib/stock-utils"
+import { formatDate } from "@/lib/utils"
+import { ProductAvatar } from "@/components/shared/product-avatar"
+import { PageHeader } from "@/components/shared/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,49 +27,35 @@ export default async function ProductoDetailPage({ params }: Props) {
     fetchStockLevel(id).catch(() => null),
   ])
 
-  const stockStatus =
-    stock === null
-      ? "Sin datos"
-      : stock.quantity === 0
-        ? "Agotado"
-        : stock.quantity <= product.min_stock
-          ? "Stock bajo"
-          : "OK"
-
-  const stockVariant =
-    stockStatus === "Agotado"
-      ? "destructive"
-      : stockStatus === "Stock bajo"
-        ? "secondary"
-        : "default"
+  const stockStatus = getStockStatus(stock?.quantity ?? null, product.min_stock)
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{product.name}</h1>
-          <p className="text-sm text-muted-foreground">{product.category.name}</p>
-        </div>
-        <Button asChild>
-          <Link href={`/productos/${id}/editar`}>
-            <HugeiconsIcon icon={PencilEdit01Icon} size={16} className="mr-2" />
-            Editar
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title={product.name}
+        description={product.category.name}
+        action={
+          <Button asChild>
+            <Link href={`/productos/${id}/editar`}>
+              <HugeiconsIcon icon={PencilEdit01Icon} size={16} className="mr-2" />
+              Editar
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="flex items-center gap-6">
-        <Avatar className="h-24 w-24 rounded-xl">
-          <AvatarImage src={product.image_url ?? undefined} alt={product.name} />
-          <AvatarFallback className="rounded-xl text-2xl">
-            {product.name.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <ProductAvatar
+          imageUrl={product.image_url}
+          name={product.name}
+          className="h-24 w-24 rounded-xl"
+          fallbackClassName="rounded-xl text-2xl"
+        />
         <div className="space-y-2">
           <Badge variant={product.is_active ? "default" : "secondary"}>
             {product.is_active ? "Activo" : "Inactivo"}
           </Badge>
-          <Badge variant={stockVariant}>{stockStatus}</Badge>
+          <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
         </div>
       </div>
 
@@ -119,8 +108,7 @@ export default async function ProductoDetailPage({ params }: Props) {
       </div>
 
       <div className="text-xs text-muted-foreground">
-        Creado: {new Date(product.created_at).toLocaleDateString("es-PE")} · Actualizado:{" "}
-        {new Date(product.updated_at).toLocaleDateString("es-PE")}
+        Creado: {formatDate(product.created_at)} · Actualizado: {formatDate(product.updated_at)}
       </div>
     </div>
   )

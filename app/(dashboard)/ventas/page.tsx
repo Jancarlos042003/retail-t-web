@@ -1,21 +1,24 @@
 import { fetchSalesToday } from "@/lib/api"
+import { PageHeader } from "@/components/shared/page-header"
 import { SalesTable } from "@/components/sales/sales-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function VentasPage() {
-  const sales = await fetchSalesToday().catch(() => [])
+  const sales = await fetchSalesToday()
 
   const completed = sales.filter((s) => s.status === "COMPLETED")
   const totalRevenue = completed.reduce((acc, s) => acc + parseFloat(s.total_amount), 0)
 
+  const todayLabel = new Date().toLocaleDateString("es-PE", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">Ventas del día</h1>
-        <p className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString("es-PE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-        </p>
-      </div>
+      <PageHeader title="Ventas del día" description={todayLabel} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>

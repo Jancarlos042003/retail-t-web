@@ -69,9 +69,17 @@ export interface StockMovementCreate {
   reason?: string | null
 }
 
+export type MovementTypeCode =
+  | "SALE"
+  | "PURCHASE"
+  | "DAMAGE"
+  | "CUSTOMER_RETURN"
+  | "INVENTORY_ADJUSTMENT_POS"
+  | "INVENTORY_ADJUSTMENT_NEG"
+
 export interface MovementTypeRead {
   id: string
-  code: string
+  code: MovementTypeCode
   name: string
   operation: "IN" | "OUT"
 }

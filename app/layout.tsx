@@ -1,6 +1,7 @@
 import { Geist_Mono, Public_Sans, Merriweather } from "next/font/google"
 
 import "./globals.css"
+import { QueryProvider } from "@/components/query-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
@@ -18,12 +19,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={cn("antialiased", fontMono.variable, "font-sans", publicSans.variable, merriweatherHeading.variable)}
     >
       <body>
-        <ThemeProvider>
-          <TooltipProvider>
-            {children}
-            <Toaster />
-          </TooltipProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster />
+            </TooltipProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   )

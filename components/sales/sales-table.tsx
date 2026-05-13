@@ -1,4 +1,6 @@
 import type { SalesTransactionRead } from "@/lib/types"
+import { TRANSACTION_STATUS_LABEL, TRANSACTION_STATUS_VARIANT } from "@/lib/constants"
+import { formatTime } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -8,20 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-
-const statusLabel: Record<string, string> = {
-  PENDING: "Pendiente",
-  COMPLETED: "Completada",
-  CANCELLED: "Cancelada",
-  REFUNDED: "Reembolsada",
-}
-
-const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "secondary",
-  COMPLETED: "default",
-  CANCELLED: "destructive",
-  REFUNDED: "outline",
-}
 
 interface SalesTableProps {
   sales: SalesTransactionRead[]
@@ -49,12 +37,7 @@ export function SalesTable({ sales }: SalesTableProps) {
         )}
         {sales.map((sale) => (
           <TableRow key={sale.id}>
-            <TableCell className="text-sm">
-              {new Date(sale.transaction_date).toLocaleTimeString("es-PE", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </TableCell>
+            <TableCell className="text-sm">{formatTime(sale.transaction_date)}</TableCell>
             <TableCell>{sale.payment_method_rel.name}</TableCell>
             <TableCell>
               <div className="space-y-0.5">
@@ -67,8 +50,8 @@ export function SalesTable({ sales }: SalesTableProps) {
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant={statusVariant[sale.status]}>
-                {statusLabel[sale.status] ?? sale.status}
+              <Badge variant={TRANSACTION_STATUS_VARIANT[sale.status]}>
+                {TRANSACTION_STATUS_LABEL[sale.status] ?? sale.status}
               </Badge>
             </TableCell>
             <TableCell className="text-right font-semibold">

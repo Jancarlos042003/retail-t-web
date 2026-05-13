@@ -6,7 +6,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"
 import { toast } from "sonner"
-import { createProduct, updateProduct } from "@/lib/api"
+import { createProduct, createStockMovement, updateProduct } from "@/lib/api"
+import { useMovementTypes } from "@/lib/queries"
+import { useProductImage } from "@/hooks/use-product-image"
 import type { CategoryRead, ProductReadWithCategory } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +27,7 @@ const schema = z.object({
   barcode: z.string().min(1, "El código de barras es requerido"),
   category_id: z.string().min(1, "La categoría es requerida"),
   min_stock: z.coerce.number().int().min(0, "El stock mínimo debe ser mayor o igual a 0"),
+  initial_stock: z.coerce.number().int().min(0, "El stock inicial debe ser mayor o igual a 0"),
   is_active: z.boolean(),
 })
 
@@ -37,9 +40,9 @@ interface ProductFormProps {
 
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter()
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
   const [submitting, setSubmitting] = useState(false)
+  const { imageFile, imagePreview, handleImageChange } = useProductImage(product?.image_url)
+  const { data: movementTypes } = useMovementTypes()
 
   const {
     register,
@@ -54,37 +57,53 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       barcode: product?.barcode ?? "",
       category_id: product?.category_id ?? "",
       min_stock: product?.min_stock ?? 0,
+      initial_stock: 0,
       is_active: product?.is_active ?? true,
     },
   })
 
   const isActive = watch("is_active")
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
+  async function handleCreate(values: FormValues) {
+    const created = await createProduct({
+      name: values.name,
+      barcode: values.barcode,
+      category_id: values.category_id,
+      min_stock: values.min_stock,
+      is_active: values.is_active,
+      image: imageFile,
+    })
+    if (values.initial_stock > 0) {
+      const adjustmentType = movementTypes?.find((t) => t.code === "INVENTORY_ADJUSTMENT_POS")
+      if (!adjustmentType) throw new Error("Tipo de movimiento de ajuste positivo no encontrado")
+      await createStockMovement({
+        product_id: created.id,
+        type_id: adjustmentType.id,
+        quantity: values.initial_stock,
+        reason: "Stock inicial",
+      })
+    }
+    toast.success("Producto creado correctamente")
+  }
+
+  async function handleUpdate(id: string, values: FormValues) {
+    await updateProduct(id, {
+      name: values.name,
+      barcode: values.barcode,
+      category_id: values.category_id,
+      min_stock: values.min_stock,
+      is_active: values.is_active,
+    })
+    toast.success("Producto actualizado correctamente")
   }
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
     try {
       if (product) {
-        await updateProduct(product.id, {
-          name: values.name,
-          barcode: values.barcode,
-          category_id: values.category_id,
-          min_stock: values.min_stock,
-          is_active: values.is_active,
-        })
-        toast.success("Producto actualizado correctamente")
+        await handleUpdate(product.id, values)
       } else {
-        await createProduct({
-          ...values,
-          image: imageFile,
-        })
-        toast.success("Producto creado correctamente")
+        await handleCreate(values)
       }
       router.push("/productos")
       router.refresh()
@@ -136,6 +155,16 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         <Input id="min_stock" type="number" min={0} {...register("min_stock")} />
         {errors.min_stock && <p className="text-destructive text-xs">{errors.min_stock.message}</p>}
       </div>
+
+      {!product && (
+        <div className="space-y-1.5">
+          <Label htmlFor="initial_stock">Stock inicial</Label>
+          <Input id="initial_stock" type="number" min={0} {...register("initial_stock")} />
+          {errors.initial_stock && (
+            <p className="text-destructive text-xs">{errors.initial_stock.message}</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="image">Imagen del producto</Label>
