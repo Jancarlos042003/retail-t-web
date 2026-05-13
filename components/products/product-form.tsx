@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"
 import { toast } from "sonner"
 import {
@@ -14,6 +14,8 @@ import {
 import { useMovementTypes } from "@/lib/queries"
 import { useProductImage } from "@/hooks/use-product-image"
 import type { CategoryRead, ProductReadWithCategory } from "@/lib/types"
+import { ProductSectionCard } from "@/components/products/product-section-card"
+import { Field } from "@/components/shared/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Field } from "@/components/shared/form-field"
 import {
   type ProductFormValues,
   productFormSchema,
@@ -48,10 +49,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const { data: movementTypes } = useMovementTypes()
 
   const {
+    control,
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<ProductFormValues>({
     resolver: standardSchemaResolver(productFormSchema),
@@ -66,7 +67,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     },
   })
 
-  const isActive = watch("is_active")
+  const isActive = useWatch({ control, name: "is_active" })
 
   // ─── Submit handlers ────────────────────────────────────────────────────────
 
@@ -114,11 +115,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     try {
       if (product) {
         await handleUpdate(product.id, values)
+        router.refresh()
       } else {
         await handleCreate(values)
+        router.push("/productos")
+        router.refresh()
       }
-      router.push("/productos")
-      router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ocurrió un error")
     } finally {
@@ -129,152 +131,161 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="w-auto space-y-8">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {/* Izquierda: identidad del producto */}
-        <div className="space-y-5">
-          <Field
-            id="name"
-            label="Nombre del producto"
-            error={errors.name?.message}
-          >
-            <Input
+    <ProductSectionCard
+      title={product ? "Datos del producto" : "Nuevo producto"}
+      description={
+        product
+          ? "Actualiza la información base del producto sin afectar precio ni stock."
+          : "Completa la información principal del producto para registrarlo en el catálogo."
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="w-auto space-y-8">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="space-y-5">
+            <Field
               id="name"
-              {...register("name")}
-              placeholder="Inca Kola 500ml"
-            />
-          </Field>
+              label="Nombre del producto"
+              error={errors.name?.message}
+            >
+              <Input
+                id="name"
+                {...register("name")}
+                placeholder="Inca Kola 500ml"
+              />
+            </Field>
 
-          <Field
-            id="barcode"
-            label="Código de barras"
-            error={errors.barcode?.message}
-          >
-            <Input
+            <Field
               id="barcode"
-              {...register("barcode")}
-              placeholder="7501234567890"
-            />
-          </Field>
-
-          <Field
-            id="category"
-            label="Categoría"
-            error={errors.category_id?.message}
-          >
-            <Select
-              defaultValue={product?.category_id}
-              onValueChange={(val) => setValue("category_id", val)}
-            >
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Selecciona una categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field id="image" label="Imagen del producto">
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Vista previa"
-                className="mt-2 h-48 w-auto rounded-md border border-border object-cover"
-              />
-            )}
-          </Field>
-        </div>
-
-        {/* Derecha: inventario, precio e imagen */}
-        <div className="space-y-5">
-          {!product && (
-            <Field
-              id="initial_stock"
-              label="Stock inicial"
-              error={errors.initial_stock?.message}
+              label="Código de barras"
+              error={errors.barcode?.message}
             >
               <Input
+                id="barcode"
+                {...register("barcode")}
+                placeholder="7501234567890"
+              />
+            </Field>
+
+            <Field
+              id="category"
+              label="Categoría"
+              error={errors.category_id?.message}
+            >
+              <Select
+                defaultValue={product?.category_id}
+                onValueChange={(val) => setValue("category_id", val)}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field id="image" label="Imagen del producto">
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="Vista previa"
+                  className="mt-2 h-48 w-auto rounded-md border border-border object-cover"
+                />
+              )}
+            </Field>
+          </div>
+
+          <div className="space-y-5">
+            {!product && (
+              <Field
                 id="initial_stock"
-                type="number"
-                min={0}
-                {...register("initial_stock")}
-              />
-            </Field>
-          )}
+                label="Stock inicial"
+                error={errors.initial_stock?.message}
+              >
+                <Input
+                  id="initial_stock"
+                  type="number"
+                  min={0}
+                  {...register("initial_stock")}
+                />
+              </Field>
+            )}
 
-          <Field
-            id="min_stock"
-            label="Stock mínimo"
-            error={errors.min_stock?.message}
-          >
-            <Input
-              id="min_stock"
-              type="number"
-              min={0}
-              {...register("min_stock")}
-            />
-          </Field>
-
-          {!product && (
             <Field
-              id="selling_price"
-              label="Precio de venta"
-              error={errors.selling_price?.message}
+              id="min_stock"
+              label="Stock mínimo"
+              error={errors.min_stock?.message}
             >
               <Input
-                id="selling_price"
+                id="min_stock"
                 type="number"
                 min={0}
-                step="0.01"
-                placeholder="0.00"
-                {...register("selling_price")}
+                {...register("min_stock")}
               />
             </Field>
-          )}
 
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              id="is_active"
-              type="checkbox"
-              className="h-4 w-4 rounded border-input accent-primary"
-              checked={isActive}
-              onChange={(e) => setValue("is_active", e.target.checked)}
-            />
-            <Label htmlFor="is_active">
-              Producto activo (disponible para venta)
-            </Label>
+            {!product && (
+              <Field
+                id="selling_price"
+                label="Precio de venta"
+                error={errors.selling_price?.message}
+              >
+                <Input
+                  id="selling_price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="0.00"
+                  {...register("selling_price")}
+                />
+              </Field>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                id="is_active"
+                type="checkbox"
+                className="h-4 w-4 rounded border-input accent-primary"
+                checked={isActive}
+                onChange={(e) => setValue("is_active", e.target.checked)}
+              />
+              <Label htmlFor="is_active">
+                Producto activo (disponible para venta)
+              </Label>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={submitting}>
-          {submitting
-            ? "Guardando..."
-            : product
-              ? "Guardar cambios"
-              : "Crear producto"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={submitting}
-        >
-          Cancelar
-        </Button>
-      </div>
-    </form>
+        <div className="flex gap-3 pt-2">
+          <Button type="submit" disabled={submitting}>
+            {submitting
+              ? "Guardando..."
+              : product
+                ? "Guardar cambios"
+                : "Crear producto"}
+          </Button>
+          {!product && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+          )}
+        </div>
+      </form>
+    </ProductSectionCard>
   )
 }
