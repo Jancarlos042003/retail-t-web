@@ -121,6 +121,7 @@ export interface SalesTransactionRead {
 
 export interface SalesTransactionCreate {
   payment_method_id: string
+  total_amount: number | string
   items: SaleItemCreate[]
 }
 

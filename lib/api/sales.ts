@@ -27,10 +27,18 @@ export function fetchSale(id: string): Promise<SalesTransactionRead> {
   return apiFetch(`/sales/${id}`)
 }
 
-export function createSale(items: SaleItemCreate[], paymentMethodId: string): Promise<SalesTransactionRead> {
+export function createSale(
+  items: SaleItemCreate[],
+  paymentMethodId: string,
+  totalAmount: number | string,
+): Promise<SalesTransactionRead> {
   return apiFetch("/sales/", {
     method: "POST",
-    body: JSON.stringify({ payment_method_id: paymentMethodId, items }),
+    body: JSON.stringify({
+      payment_method_id: paymentMethodId,
+      total_amount: totalAmount,
+      items,
+    }),
   })
 }
 
