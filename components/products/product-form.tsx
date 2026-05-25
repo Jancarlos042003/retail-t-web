@@ -10,6 +10,7 @@ import {
   createStockMovement,
   setPrice,
   updateProduct,
+  uploadImage,
 } from "@/lib/api"
 import { useMovementTypes } from "@/lib/queries"
 import { useProductImage } from "@/hooks/use-product-image"
@@ -100,12 +101,18 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   }
 
   async function handleUpdate(id: string, values: ProductFormValues) {
+    let image_url: string | undefined
+    if (imageFile) {
+      const uploaded = await uploadImage(imageFile)
+      image_url = uploaded.public_url
+    }
     await updateProduct(id, {
       name: values.name,
       barcode: values.barcode,
       category_id: values.category_id,
       min_stock: values.min_stock,
       is_active: values.is_active,
+      ...(image_url !== undefined && { image_url }),
     })
     toast.success("Producto actualizado correctamente")
   }
