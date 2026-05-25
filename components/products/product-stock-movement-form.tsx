@@ -21,18 +21,15 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Field } from "@/components/shared/form-field"
-import { productStockMovementFormSchema } from "./product-stock-movement-form.schema"
+import {
+  productStockMovementFormSchema,
+  type ProductStockMovementFormState,
+  type ProductStockMovementFormValues,
+} from "./product-stock-movement-form.schema"
 
 interface ProductStockMovementFormProps {
   productId: string
   currentStock: number | null
-}
-
-interface ProductStockMovementFormState {
-  operation: "" | "IN" | "OUT"
-  type_id: string
-  quantity: number | undefined
-  reason: string
 }
 
 export function ProductStockMovementForm({
