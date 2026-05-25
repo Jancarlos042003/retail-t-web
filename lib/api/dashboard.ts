@@ -17,7 +17,12 @@ export async function fetchDashboardData() {
   )
 
   const lowStock = products
-    .filter((p) => (stockMap.get(p.id) ?? Infinity) <= p.min_stock)
+    .filter((p) => {
+      const qty = stockMap.get(p.id)
+      // qty === undefined → no hay datos de stock, se excluye
+      // qty === 0 → agotado, se excluye del "bajo stock" para mantener consistencia con inventario
+      return qty !== undefined && qty > 0 && qty <= p.min_stock
+    })
     .map((p) => ({ ...p, stock_quantity: stockMap.get(p.id) ?? 0 }))
 
   return {
@@ -57,7 +62,10 @@ export async function fetchDashboardMetrics() {
       .map((r) => [r.value.product_id, r.value.quantity])
   )
 
-  const lowStockCount = products.filter((p) => (stockMap.get(p.id) ?? Infinity) <= p.min_stock).length
+  const lowStockCount = products.filter((p) => {
+    const qty = stockMap.get(p.id)
+    return qty !== undefined && qty > 0 && qty <= p.min_stock
+  }).length
 
   return {
     total_sales_today: completedSales.length,
