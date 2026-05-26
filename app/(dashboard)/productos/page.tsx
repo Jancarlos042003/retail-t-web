@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 
 export default async function ProductosPage() {
   const [productsPage, categories] = await Promise.all([
-    fetchProductsPage({ limit: PRODUCTS_PAGE_SIZE, offset: 0 }),
+    fetchProductsPage({ limit: PRODUCTS_PAGE_SIZE, offset: 0, include_stock: true, include_price: true }),
     fetchCategories().catch(() => []),
   ])
 

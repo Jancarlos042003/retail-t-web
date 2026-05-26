@@ -48,6 +48,8 @@ export function ProductsContainer({ categories, initialPage }: ProductsContainer
       statusValue === ALL_STATUSES_VALUE ? undefined : statusValue === "true",
     limit: PRODUCTS_PAGE_SIZE,
     offset,
+    include_stock: true,
+    include_price: true,
   }
 
   const isInitialQuery =
