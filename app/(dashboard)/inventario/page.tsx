@@ -1,7 +1,5 @@
-import { fetchProducts, fetchStockLevel } from "@/lib/api"
-import type { ProductReadWithCategory, StockLevelRead } from "@/lib/types"
+import { fetchProducts } from "@/lib/api"
 import { getStockStatus } from "@/lib/stock-utils"
-import { formatDate } from "@/lib/utils"
 import { ProductAvatar } from "@/components/shared/product-avatar"
 import { PageHeader } from "@/components/shared/page-header"
 import { Badge } from "@/components/ui/badge"
@@ -15,24 +13,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-type ProductWithStock = ProductReadWithCategory & { stock: StockLevelRead | null }
-
 export default async function InventarioPage() {
-  const products = await fetchProducts(true)
+  const products = await fetchProducts(true, { include_stock: true })
 
-  const stockResults = await Promise.allSettled(
-    products.map((p) => fetchStockLevel(p.id))
+  const lowStock = products.filter(
+    (p) => p.stock_quantity !== null && p.stock_quantity > 0 && p.stock_quantity <= p.min_stock
   )
-
-  const productsWithStock: ProductWithStock[] = products.map((p, i) => ({
-    ...p,
-    stock: stockResults[i].status === "fulfilled" ? (stockResults[i] as PromiseFulfilledResult<StockLevelRead>).value : null,
-  }))
-
-  const lowStock = productsWithStock.filter(
-    (p) => p.stock !== null && p.stock.quantity > 0 && p.stock.quantity <= p.min_stock
-  )
-  const outOfStock = productsWithStock.filter((p) => p.stock?.quantity === 0)
+  const outOfStock = products.filter((p) => p.stock_quantity === 0)
 
   return (
     <div className="space-y-6">
@@ -90,19 +77,18 @@ export default async function InventarioPage() {
             <TableHead>Stock actual</TableHead>
             <TableHead>Stock mínimo</TableHead>
             <TableHead>Estado</TableHead>
-            <TableHead>Actualizado</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {productsWithStock.length === 0 && (
+          {products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+              <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                 No hay productos registrados
               </TableCell>
             </TableRow>
           )}
-          {productsWithStock.map((product) => {
-            const status = getStockStatus(product.stock?.quantity ?? null, product.min_stock)
+          {products.map((product) => {
+            const status = getStockStatus(product.stock_quantity, product.min_stock)
             return (
               <TableRow key={product.id}>
                 <TableCell>
@@ -110,13 +96,10 @@ export default async function InventarioPage() {
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>{product.category.name}</TableCell>
-                <TableCell className="font-mono">{product.stock?.quantity ?? "—"}</TableCell>
+                <TableCell className="font-mono">{product.stock_quantity ?? "—"}</TableCell>
                 <TableCell className="font-mono">{product.min_stock}</TableCell>
                 <TableCell>
                   <Badge variant={status.variant}>{status.label}</Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {product.stock ? formatDate(product.stock.updated_at) : "—"}
                 </TableCell>
               </TableRow>
             )
