@@ -1,29 +1,20 @@
-import type { ProductReadWithCategory, StockLevelRead } from "../types"
+import type { ProductReadWithMetrics } from "../types"
 import { fetchProducts } from "./products"
-import { fetchStockLevel } from "./inventory"
 import { fetchSalesToday } from "./sales"
 
 export async function fetchDashboardData() {
-  const [salesToday, products] = await Promise.all([fetchSalesToday(), fetchProducts(true)])
+  const [salesToday, products] = await Promise.all([
+    fetchSalesToday(),
+    fetchProducts(true, { include_stock: true }),
+  ])
 
   const completedSales = salesToday.filter((s) => s.status === "COMPLETED")
   const totalRevenue = completedSales.reduce((acc, s) => acc + parseFloat(s.total_amount), 0)
 
-  const stockResults = await Promise.allSettled(products.map((p) => fetchStockLevel(p.id)))
-  const stockMap = new Map(
-    stockResults
-      .filter((r): r is PromiseFulfilledResult<StockLevelRead> => r.status === "fulfilled")
-      .map((r) => [r.value.product_id, r.value.quantity])
-  )
-
-  const lowStock = products
-    .filter((p) => {
-      const qty = stockMap.get(p.id)
-      // qty === undefined → no hay datos de stock, se excluye
-      // qty === 0 → agotado, se excluye del "bajo stock" para mantener consistencia con inventario
-      return qty !== undefined && qty > 0 && qty <= p.min_stock
-    })
-    .map((p) => ({ ...p, stock_quantity: stockMap.get(p.id) ?? 0 }))
+  const lowStock = products.filter((p) => {
+    const qty = p.stock_quantity
+    return qty !== null && qty > 0 && qty <= p.min_stock
+  })
 
   return {
     metrics: {
@@ -36,35 +27,26 @@ export async function fetchDashboardData() {
   }
 }
 
-export async function fetchLowStockProducts(): Promise<
-  (ProductReadWithCategory & { stock_quantity: number })[]
-> {
-  const products = await fetchProducts(true)
-  const stockResults = await Promise.allSettled(
-    products.map((p) => fetchStockLevel(p.id).then((s) => ({ ...p, stock_quantity: s.quantity })))
-  )
-  return stockResults
-    .filter((r): r is PromiseFulfilledResult<ProductReadWithCategory & { stock_quantity: number }> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .filter((p) => p.stock_quantity <= p.min_stock)
+export async function fetchLowStockProducts(): Promise<ProductReadWithMetrics[]> {
+  const products = await fetchProducts(true, { include_stock: true })
+  return products.filter((p) => {
+    const qty = p.stock_quantity
+    return qty !== null && qty > 0 && qty <= p.min_stock
+  })
 }
 
 export async function fetchDashboardMetrics() {
-  const [salesToday, products] = await Promise.all([fetchSalesToday(), fetchProducts(true)])
+  const [salesToday, products] = await Promise.all([
+    fetchSalesToday(),
+    fetchProducts(true, { include_stock: true }),
+  ])
 
   const completedSales = salesToday.filter((s) => s.status === "COMPLETED")
   const totalRevenue = completedSales.reduce((acc, s) => acc + parseFloat(s.total_amount), 0)
 
-  const stockResults = await Promise.allSettled(products.map((p) => fetchStockLevel(p.id)))
-  const stockMap = new Map(
-    stockResults
-      .filter((r): r is PromiseFulfilledResult<StockLevelRead> => r.status === "fulfilled")
-      .map((r) => [r.value.product_id, r.value.quantity])
-  )
-
   const lowStockCount = products.filter((p) => {
-    const qty = stockMap.get(p.id)
-    return qty !== undefined && qty > 0 && qty <= p.min_stock
+    const qty = p.stock_quantity
+    return qty !== null && qty > 0 && qty <= p.min_stock
   }).length
 
   return {
