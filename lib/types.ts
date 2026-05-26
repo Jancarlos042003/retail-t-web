@@ -27,6 +27,14 @@ export interface ProductReadWithCategory extends ProductRead {
   category: CategoryRead
 }
 
+/** Extiende ProductReadWithCategory con métricas opcionales del backend. */
+export interface ProductReadWithMetrics extends ProductReadWithCategory {
+  /** null cuando include_stock=false o el producto no tiene registro de stock */
+  stock_quantity: number | null
+  /** null cuando include_price=false o el producto no tiene precio vigente */
+  selling_price: string | null
+}
+
 export interface ProductUpdate {
   barcode?: string | null
   name?: string | null
@@ -40,6 +48,7 @@ export interface ProductPriceRead {
   id: string
   product_id: string
   selling_price: string
+  effective_from: string
   effective_to?: string | null
 }
 
@@ -161,6 +170,8 @@ export interface ProductListParams extends PaginationParams {
   name?: string
   category_id?: string
   is_active?: boolean
+  include_stock?: boolean
+  include_price?: boolean
 }
 
-export type ProductListResponse = PaginatedResponse<ProductReadWithCategory>
+export type ProductListResponse = PaginatedResponse<ProductReadWithMetrics>

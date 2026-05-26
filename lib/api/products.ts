@@ -6,6 +6,7 @@ import type {
   ProductPriceRead,
   ProductRead,
   ProductReadWithCategory,
+  ProductReadWithMetrics,
   ProductUpdate,
 } from "../types"
 import { apiFetch, apiFetchForm } from "./base"
@@ -17,6 +18,8 @@ function buildProductsPath(params: ProductListParams = {}) {
   if (name) qs.set("name", name)
   if (params.category_id) qs.set("category_id", params.category_id)
   if (params.is_active !== undefined) qs.set("is_active", String(params.is_active))
+  if (params.include_stock) qs.set("include_stock", "true")
+  if (params.include_price) qs.set("include_price", "true")
   if (params.limit !== undefined) qs.set("limit", String(params.limit))
   if (params.offset !== undefined) qs.set("offset", String(params.offset))
 
@@ -28,8 +31,11 @@ export function fetchProductsPage(params: ProductListParams = {}): Promise<Produ
   return apiFetch(buildProductsPath(params))
 }
 
-export function fetchProducts(isActive?: boolean): Promise<ProductReadWithCategory[]> {
-  return fetchAllProducts({ is_active: isActive })
+export function fetchProducts(
+  isActive?: boolean,
+  options?: Pick<ProductListParams, "include_stock" | "include_price">,
+): Promise<ProductReadWithMetrics[]> {
+  return fetchAllProducts({ is_active: isActive, ...options })
 }
 
 export function fetchProduct(id: string): Promise<ProductReadWithCategory> {
@@ -67,7 +73,9 @@ export function setPrice(productId: string, data: ProductPriceCreate): Promise<P
   return apiFetch(`/products/${productId}/prices/`, { method: "POST", body: JSON.stringify(data) })
 }
 
-async function fetchAllProducts(params: Omit<ProductListParams, "limit" | "offset"> = {}) {
+async function fetchAllProducts(
+  params: Omit<ProductListParams, "limit" | "offset"> = {},
+): Promise<ProductReadWithMetrics[]> {
   const firstPage = await fetchProductsPage({ ...params, limit: 100, offset: 0 })
 
   if (firstPage.total_pages <= 1) {
